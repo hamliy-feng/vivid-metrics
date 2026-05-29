@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import {
-  wechatVideos, xhsNotes, filterWechat, filterXhs,
+  filterWechat, filterXhs,
   dateRange, dailyPlays, dailyExposure,
   DATE_START, DATE_END, PALETTE,
 } from "@/lib/data";

@@ -21,7 +21,7 @@ export function BottomNav() {
         {NAV_ITEMS.map(({ href, label, Icon }) => {
           const active = pathname === href;
           return (
-            <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5">
+            <Link key={href} href={href} prefetch={false} className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5">
               <motion.div
                 whileTap={{ scale: 0.85 }}
                 className={`p-1.5 rounded-xl transition-colors ${active ? "bg-[var(--app-secondary)]/10" : ""}`}
@@ -59,7 +59,7 @@ export function Sidebar() {
       {NAV_ITEMS.map(({ href, label, Icon }) => {
         const active = pathname === href;
         return (
-          <Link key={href} href={href}>
+          <Link key={href} href={href} prefetch={false}>
             <motion.div
               whileHover={{ x: 2 }}
               whileTap={{ scale: 0.97 }}

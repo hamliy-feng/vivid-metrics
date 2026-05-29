@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import {
-  filterWechat, filterXhs, interactionByBucket,
+  filterWechat, interactionByBucket,
   contentTypeDistribution, weekdayStats, PALETTE,
 } from "@/lib/data";
 import type { EChartsOption } from "echarts";
@@ -184,8 +184,6 @@ export function WeekdayRadar({ platform, account }: AnalyticsProps) {
 
 /* ── 涨粉×流量气泡图 ── */
 export function BubbleChart({ platform, account }: AnalyticsProps) {
-  const color = platform === "wechat" ? PALETTE.wechat : PALETTE.xhs;
-
   let seriesData: { value: [number, number, number]; name: string; itemStyle: { color: string } }[] = [];
 
   if (platform === "wechat") {

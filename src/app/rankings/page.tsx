@@ -59,8 +59,8 @@ export default function RankingsPage() {
 
       <div className="relative z-10 max-w-[900px] mx-auto px-4 pt-6 pb-8 space-y-5">
         {/* 头部 */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="min-w-0">
             <h1 className="text-xl font-black text-[var(--app-text)] flex items-center gap-2">
               <BarChart2 size={20} className="text-[var(--app-primary)]" />
               内容排行榜
@@ -68,12 +68,12 @@ export default function RankingsPage() {
             <p className="text-xs text-[var(--app-text-muted)]">按单项指标排序，点击条目查看详情</p>
           </div>
           {/* 控件组 */}
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
             {/* 来源切换 */}
             <div className="glass-card rounded-xl p-0.5 flex">
               {(["wechat", "xhs"] as Source[]).map((s) => (
                 <button key={s} onClick={() => setSource(s)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                     source === s ? "text-white shadow-sm" : "text-[var(--app-text-secondary)]"
                   }`}
                   style={source === s ? { background: s === "wechat" ? PALETTE.wechat : PALETTE.xhs } : {}}
@@ -86,7 +86,7 @@ export default function RankingsPage() {
             <div className="glass-card rounded-xl p-0.5 flex">
               {([["plays", "播放量"], ["interaction", "互动总量"]] as [Metric, string][]).map(([m, label]) => (
                 <button key={m} onClick={() => setMetric(m)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                     metric === m ? "bg-white text-[var(--app-text)] shadow-sm" : "text-[var(--app-text-muted)]"
                   }`}
                 >
@@ -106,7 +106,7 @@ export default function RankingsPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.03, duration: 0.25 }}
             >
-              <Link href={`/detail?rank=${item.id}&source=${source}`}>
+              <Link href={`/detail?rank=${item.id}&source=${source}`} className="block" prefetch={false}>
                 <motion.div
                   whileHover={{ x: 4 }}
                   whileTap={{ scale: 0.98 }}
@@ -130,7 +130,7 @@ export default function RankingsPage() {
                   </div>
 
                   {/* 数值 */}
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 min-w-[56px]">
                     <div className="text-sm font-black text-[var(--app-text)]">{fmt(item.primary)}</div>
                     <div
                       className="text-[10px] font-semibold"

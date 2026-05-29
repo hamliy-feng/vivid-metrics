@@ -8,16 +8,6 @@ interface ChartPlaceholder {
   size: "full" | "half" | "third";
 }
 
-const WECHAT_CHARTS: ChartPlaceholder[] = [
-  { label: "每日播放趋势", type: "line",   size: "full"  },
-  { label: "前10播放排行", type: "bar",    size: "half"  },
-  { label: "多维流量分析", type: "multi",  size: "half"  },
-  { label: "互动效率分段", type: "bar",    size: "third" },
-  { label: "内容类型分布", type: "pie",    size: "third" },
-  { label: "星期发布规律", type: "radar",  size: "third" },
-  { label: "涨粉×流量气泡", type: "bubble", size: "full" },
-];
-
 const DOUYIN_CHARTS: ChartPlaceholder[] = [
   { label: "每日播放趋势", type: "line",   size: "full"  },
   { label: "前10播放排行", type: "bar",    size: "half"  },
@@ -312,7 +302,7 @@ export default function EmptyPlatformScreen({ platform }: Props) {
 
         {/* ── KPI 占位行 ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {["单日平均播放量", "总点赞数", "总涨粉数", "平均完播率"].map((label, i) => (
+          {["单日平均播放量", "总点赞数", "总涨粉数", "平均完播率"].map((label) => (
             <div key={label} className="glass-card rounded-2xl p-5 space-y-2 relative overflow-hidden">
               <div className="text-xs text-[var(--app-text-muted)]">{label}</div>
               <div className="flex items-end gap-1">

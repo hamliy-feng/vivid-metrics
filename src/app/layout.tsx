@@ -9,20 +9,25 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const SITE_TITLE = "VividMetrics · 内容运营数据大屏";
 const SITE_DESCRIPTION = "微信视频号 & 小红书跨账号运营数据可视化";
+const SITE_URL = "https://hamliy-feng.github.io/vivid-metrics/";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://hamliy-feng.github.io"),
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: SITE_URL,
+  },
   openGraph: {
     type: "website",
     siteName: "VividMetrics",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    url: "/",
+    url: SITE_URL,
     locale: "zh_CN",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },

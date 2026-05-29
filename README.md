@@ -1,48 +1,31 @@
-A minimal Next.js starter for building apps inside the [Eazo](https://eazo.ai) platform. Includes a working example of the Eazo session token flow: the app requests the encrypted user token from the host via `postMessage`, sends it to a Next.js API route, decrypts it server-side with `@eazo/node-sdk`, and returns the user profile.
+# VividMetrics
 
-## Getting Started
+内容运营数据大屏，用于查看微信视频号、小红书、抖音、快手和公众号的跨平台运营表现。
 
-Install dependencies with Bun:
+## 在线访问
+
+- 排行榜页面：https://hamliy-feng.github.io/vivid-metrics/rankings/
+- 总览页面：https://hamliy-feng.github.io/vivid-metrics/
+
+## 本地预览
 
 ```bash
 bun install
-```
-
-If dependency installation stalls on this machine during `sharp` setup, use:
-
-```bash
-SHARP_IGNORE_GLOBAL_LIBVIPS=1 bun install
-```
-
-Then start the development server:
-
-```bash
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+本地访问：
 
-## Environment Variables
-
-Copy `.env.example` to `.env` and fill in your private key:
-
-```bash
-cp .env.example .env
+```text
+http://localhost:3000/vivid-metrics/rankings
 ```
 
-| Variable | Description |
-|---|---|
-| `EAZO_PRIVATE_KEY` | Your Eazo developer private key (hex, 64 chars). Used server-side to decrypt the user session token. |
+## 发布
 
-You can generate a keypair in the Eazo developer settings. Never expose the private key to the browser.
+推送到 `master` 后，GitHub Actions 会自动构建静态页面并发布到 GitHub Pages。发布流程会检查：
 
-## Learn More
+- `out/rankings/index.html` 已生成
+- `_next/static` 资源已生成
+- 页面资源路径包含 `/vivid-metrics/_next/static`
 
-- [Eazo Documentation](https://docs.eazo.ai)
-- [Next.js Documentation](https://nextjs.org/docs)
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+这些检查用于避免线上页面只剩文字、样式或脚本资源丢失。

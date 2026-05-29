@@ -2,7 +2,7 @@
 
 # 当前目标
 
-- 将 `vivid-metrics` 发布为可公开分享的 GitHub Pages 页面，重点保证 `/vivid-metrics/rankings` 在线访问效果与本地 `localhost:3000/vivid-metrics/rankings` 一致。
+- `vivid-metrics` 已发布为可公开分享的 GitHub Pages 页面，核心分享页为 `/vivid-metrics/rankings/`。
 
 # 范围 / 不做
 
@@ -11,9 +11,9 @@
 
 # 当前状态
 
-- 已完成：确认本地 GitHub 登录账号为 `hamliy-feng`；项目为 Next.js 静态导出，`basePath` 为 `/vivid-metrics`。
-- 进行中：整理 GitHub Pages 发布链路并做多轮本地/线上验证。
-- 未开始：远端仓库重建或清理、推送、Pages 部署确认。
+- 已完成：GitHub Actions 部署成功；线上链接 `https://hamliy-feng.github.io/vivid-metrics/rankings/` 可访问；桌面和 390px 手机视口均已通过视觉和资源检查。
+- 进行中：无。
+- 未开始：无。
 
 # 稳定约束
 
@@ -26,9 +26,9 @@
 - 活跃任务：无独立任务目录；当前线程内处理 GitHub Pages 发布。
 - 关键页面 / 模块：`/vivid-metrics/rankings`
 - 关键文件 / 路径：`next.config.ts`、`.github/workflows/deploy.yml`、`src/app/rankings/page.tsx`
-- 关键节点 / 资源：GitHub 仓库 `hamliy-feng/vivid-metrics`、GitHub Pages
+- 关键节点 / 资源：GitHub 仓库 `hamliy-feng/vivid-metrics`、GitHub Pages、最新已部署提交 `9a831fd`
 
 # 风险 / 下一步
 
-- 风险：GitHub Pages 若未正确启用 Actions 源，或静态资源路径/basePath 不匹配，线上页面可能只显示少量文字或样式丢失。
-- 下一步：跑本地构建，检查导出文件和页面资源，再处理远端仓库并推送部署。
+- 风险：远端同名仓库未能删除重建，因为当前 GitHub CLI token 缺少 `delete_repo` scope；已复用同名公开仓库完成发布，不影响分享链接。
+- 下一步：若用户仍要求删除重建仓库，需要先执行 `gh auth refresh -h github.com -s delete_repo` 并在浏览器完成授权。

@@ -20,11 +20,18 @@ export function Top10BarChart({ platform, account, videos, notes }: TopBarProps)
     items = [...rows]
       .sort((a, b) => b.plays - a.plays)
       .slice(0, 10)
-      .map((v) => ({
-        label: v.desc.length > 18 ? v.desc.slice(0, 18) + "…" : v.desc,
-        plays: v.plays,
-        extra: `完播率: ${v.completion !== null ? v.completion + "%" : "—"} · 增量日 ${v.metricDate || v.publishDate} · 发布 ${v.publishDate}`,
-      }));
+      .map((v) => {
+        const isDelta = Boolean(v.metricDate);
+        const valueLabel = isDelta ? "当日新增浏览" : "浏览量";
+        const cumulative = isDelta && v.cumulativePlays !== undefined
+          ? `<br/>最新累计: ${v.cumulativePlays.toLocaleString("zh-CN")}`
+          : "";
+        return {
+          label: v.desc.length > 18 ? v.desc.slice(0, 18) + "…" : v.desc,
+          plays: v.plays,
+          extra: `${valueLabel}: ${v.plays.toLocaleString("zh-CN")}<br/>完播率: ${v.completion !== null ? v.completion + "%" : "—"}${cumulative}<br/>${isDelta ? `增量日 ${v.metricDate} · ` : ""}发布 ${v.publishDate}`,
+        };
+      });
   } else {
     const rows = notes ?? (filterXhs(account as never) as XhsNote[]);
     items = [...rows]

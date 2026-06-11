@@ -35,6 +35,7 @@ FIELD_COMMENTS = "\u8bc4\u8bba\u91cf"
 FIELD_SHARES = "\u5206\u4eab\u91cf"
 FIELD_FOLLOWERS = "\u5173\u6ce8\u91cf"
 WECHAT_TRAFFIC_FIELDS = ("plays", "likes", "comments", "shares", "followers")
+WECHAT_SNAPSHOT_ONLY_MODES = {"latest_file", "cheat_parallel"}
 
 FIELD_NOTE_TITLE = "\u7b14\u8bb0\u6807\u9898"
 FIELD_NOTE_TIME = "\u9996\u6b21\u53d1\u5e03\u65f6\u95f4"
@@ -258,6 +259,8 @@ def add_wechat_file(
     snapshot_at = file_snapshot_at(path)
     snapshot_date = snapshot_at.strftime("%Y-%m-%d")
     count = 0
+    preserved_existing = 0
+    added_to_base = 0
     for row in rows:
         desc = clean_text(row.get(FIELD_VIDEO_DESC))
         publish_date = parse_date(row.get(FIELD_PUBLISH_AT))
@@ -279,7 +282,11 @@ def add_wechat_file(
             "snapshotDate": snapshot_date,
         }
         key = (account, video_id or desc, publish_date)
-        items[key] = item
+        if mode in WECHAT_SNAPSHOT_ONLY_MODES and key in items:
+            preserved_existing += 1
+        else:
+            items[key] = item
+            added_to_base += 1
         if snapshots is not None:
             snapshots.append({
                 **item,
@@ -287,7 +294,15 @@ def add_wechat_file(
                 "sourcePlatformId": platform_id,
             })
         count += 1
-    imported.append({"file": str(path), "account": account, "rows": count, "platformId": platform_id, "mode": mode})
+    imported.append({
+        "file": str(path),
+        "account": account,
+        "rows": count,
+        "platformId": platform_id,
+        "mode": mode,
+        "baseRowsAdded": added_to_base,
+        "baseRowsPreserved": preserved_existing,
+    })
 
 
 def build_wechat_traffic_rows(snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:

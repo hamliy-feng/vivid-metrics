@@ -18,10 +18,11 @@ type Platform = "wechat" | "xhs";
 type TimeWindow = "1d" | "7d" | "30d";
 
 const TIME_WINDOWS: Array<{ value: TimeWindow; label: string; days: number }> = [
-  { value: "1d", label: "最近一天", days: 1 },
+  { value: "1d", label: "最新一日", days: 1 },
   { value: "7d", label: "近7天", days: 7 },
   { value: "30d", label: "近30天", days: 30 },
 ];
+const WECHAT_DELTA_START = "2026-06-11";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   wechat:   "微信",
@@ -44,11 +45,21 @@ function subtractDays(dateStr: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+function shortDateLabel(dateStr: string): string {
+  const [, month, day] = dateStr.split("-").map(Number);
+  return `${month}月${day}日`;
+}
+
+function previousDate(dateStr: string): string {
+  return subtractDays(dateStr, 1);
+}
+
 function resolveTimeWindow(window: TimeWindow) {
   const config = TIME_WINDOWS.find((item) => item.value === window) ?? TIME_WINDOWS[0];
   const start = subtractDays(DATE_END, config.days - 1);
   return {
     ...config,
+    label: config.value === "1d" ? shortDateLabel(DATE_END) : config.label,
     start: start < DATE_START ? DATE_START : start,
     end: DATE_END,
   };
@@ -69,6 +80,52 @@ function rangeText(start: string, end: string, label: string): string {
   return start === end ? `${label} · ${end}` : `${label} · ${start} — ${end}`;
 }
 
+function resolveWechatWindowRows({
+  window,
+  start,
+  end,
+  publishedRows,
+  trafficRows,
+}: {
+  window: TimeWindow;
+  start: string;
+  end: string;
+  publishedRows: ReturnType<typeof filterWechat>;
+  trafficRows: ReturnType<typeof filterWechatTraffic>;
+}) {
+  const publishedWindow = filterByDate(publishedRows, start, end);
+  const trafficWindow = filterByDate(trafficRows, start, end);
+
+  if (window === "1d") {
+    return {
+      rows: trafficWindow.length ? trafficWindow : publishedWindow,
+      mode: trafficWindow.length ? "区间差值增量" : "按发布时间",
+    };
+  }
+
+  if (window === "7d") {
+    const backfillEnd = previousDate(WECHAT_DELTA_START);
+    const backfillRows = start <= backfillEnd
+      ? filterByDate(publishedRows, start, backfillEnd < end ? backfillEnd : end)
+      : [];
+    const deltaRows = end >= WECHAT_DELTA_START
+      ? filterByDate(trafficRows, WECHAT_DELTA_START > start ? WECHAT_DELTA_START : start, end)
+      : [];
+
+    if (deltaRows.length) {
+      return {
+        rows: [...backfillRows, ...deltaRows],
+        mode: `${shortDateLabel(WECHAT_DELTA_START)}起差值累加`,
+      };
+    }
+  }
+
+  return {
+    rows: publishedWindow,
+    mode: window === "30d" ? "30天总和" : "按发布时间",
+  };
+}
+
 export function DashboardScreen() {
   const [platform, setPlatform] = useState<Platform>("wechat");
   const [wAccount, setWAccount] = useState<string>("全部");
@@ -81,16 +138,17 @@ export function DashboardScreen() {
   const wBaseVideos = useMemo(() => filterWechat(wAccount as never), [wAccount]);
   const wBaseTrafficVideos = useMemo(() => filterWechatTraffic(wAccount as never), [wAccount]);
   const xBaseNotes = useMemo(() => filterXhs(xAccount as never), [xAccount]);
-  const wPublishedVideos = useMemo(
-    () => filterByDate(wBaseVideos, selectedRange.start, selectedRange.end),
-    [wBaseVideos, selectedRange.start, selectedRange.end],
+  const wechatWindow = useMemo(
+    () => resolveWechatWindowRows({
+      window: timeWindow,
+      start: selectedRange.start,
+      end: selectedRange.end,
+      publishedRows: wBaseVideos,
+      trafficRows: wBaseTrafficVideos,
+    }),
+    [timeWindow, selectedRange.start, selectedRange.end, wBaseVideos, wBaseTrafficVideos],
   );
-  const wTrafficVideos = useMemo(
-    () => filterByDate(wBaseTrafficVideos, selectedRange.start, selectedRange.end),
-    [wBaseTrafficVideos, selectedRange.start, selectedRange.end],
-  );
-  const hasWechatTrafficRows = wTrafficVideos.length > 0;
-  const wVideos = hasWechatTrafficRows ? wTrafficVideos : wPublishedVideos;
+  const wVideos = wechatWindow.rows;
   const xNotes = useMemo(
     () => filterByDate(xBaseNotes, selectedRange.start, selectedRange.end),
     [xBaseNotes, selectedRange.start, selectedRange.end],
@@ -99,7 +157,7 @@ export function DashboardScreen() {
   const xKpi = xhsKpi(xNotes);
   const totalWechatViews = wVideos.reduce((sum, video) => sum + video.plays, 0);
   const totalXhsViews = xNotes.reduce((sum, note) => sum + note.views, 0);
-  const wechatRangeText = `${selectedRangeText} · ${hasWechatTrafficRows ? "区间差值增量" : "按发布时间"}`;
+  const wechatRangeText = `${selectedRangeText} · ${wechatWindow.mode}`;
 
   const isActive = (p: Platform) => platform === p;
 
@@ -348,7 +406,7 @@ function TimeWindowBar({ active, onChange, color }: {
             />
           )}
           <CalendarDays size={12} className="relative z-10" />
-          <span className="relative z-10">{item.label}</span>
+          <span className="relative z-10">{item.value === "1d" ? shortDateLabel(DATE_END) : item.label}</span>
         </motion.button>
       ))}
     </div>

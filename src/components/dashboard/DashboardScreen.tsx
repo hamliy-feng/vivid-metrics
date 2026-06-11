@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { CalendarDays } from "lucide-react";
 import { KpiCard } from "./KpiCard";
 import { TrendChart } from "./TrendChart";
 import { Top10BarChart, Top10MultiBar } from "./RankingCharts";
@@ -8,11 +9,19 @@ import { InteractionBucketChart, ContentTypeDonut, WeekdayRadar, BubbleChart } f
 import { GenreCompareChart } from "./GenreCompare";
 import {
   filterWechat, filterXhs, wechatKpi, xhsKpi,
+  DATE_END, DATE_SPAN, DATE_START,
   WECHAT_ACCOUNTS, XHS_ACCOUNTS, PALETTE,
 } from "@/lib/data";
 import { accountSummaries } from "@/lib/data/account-summaries";
 
 type Platform = "wechat" | "xhs";
+type TimeWindow = "1d" | "7d" | "30d";
+
+const TIME_WINDOWS: Array<{ value: TimeWindow; label: string; days: number }> = [
+  { value: "1d", label: "最近一天", days: 1 },
+  { value: "7d", label: "近7天", days: 7 },
+  { value: "30d", label: "近30天", days: 30 },
+];
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   wechat:   "微信",
@@ -29,15 +38,53 @@ function fmt(n: number): string {
   return n.toLocaleString("zh-CN");
 }
 
+function subtractDays(dateStr: string, days: number): string {
+  const date = new Date(dateStr + "T00:00:00Z");
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function resolveTimeWindow(window: TimeWindow) {
+  const config = TIME_WINDOWS.find((item) => item.value === window) ?? TIME_WINDOWS[0];
+  const start = subtractDays(DATE_END, config.days - 1);
+  return {
+    ...config,
+    start: start < DATE_START ? DATE_START : start,
+    end: DATE_END,
+  };
+}
+
+function filterByDate<T extends { publishDate: string }>(rows: T[], start: string, end: string): T[] {
+  return rows.filter((row) => row.publishDate >= start && row.publishDate <= end);
+}
+
+function rangeText(start: string, end: string, label: string): string {
+  return start === end ? `${label} · ${end}` : `${label} · ${start} — ${end}`;
+}
+
 export function DashboardScreen() {
   const [platform, setPlatform] = useState<Platform>("wechat");
   const [wAccount, setWAccount] = useState<string>("全部");
   const [xAccount, setXAccount] = useState<string>("全部");
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>("1d");
 
-  const wVideos = filterWechat(wAccount as never);
-  const xNotes  = filterXhs(xAccount as never);
+  const selectedRange = useMemo(() => resolveTimeWindow(timeWindow), [timeWindow]);
+  const selectedRangeText = rangeText(selectedRange.start, selectedRange.end, selectedRange.label);
+
+  const wBaseVideos = useMemo(() => filterWechat(wAccount as never), [wAccount]);
+  const xBaseNotes = useMemo(() => filterXhs(xAccount as never), [xAccount]);
+  const wVideos = useMemo(
+    () => filterByDate(wBaseVideos, selectedRange.start, selectedRange.end),
+    [wBaseVideos, selectedRange.start, selectedRange.end],
+  );
+  const xNotes = useMemo(
+    () => filterByDate(xBaseNotes, selectedRange.start, selectedRange.end),
+    [xBaseNotes, selectedRange.start, selectedRange.end],
+  );
   const wKpi = wechatKpi(wVideos);
   const xKpi = xhsKpi(xNotes);
+  const totalWechatViews = wVideos.reduce((sum, video) => sum + video.plays, 0);
+  const totalXhsViews = xNotes.reduce((sum, note) => sum + note.views, 0);
 
   const isActive = (p: Platform) => platform === p;
 
@@ -56,7 +103,7 @@ export function DashboardScreen() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-black text-[var(--app-text)] tracking-tight">内容运营大屏</h1>
-            <p className="text-xs text-[var(--app-text-muted)]">2026-04-01 — 2026-05-28 · 共 58 天</p>
+            <p className="text-xs text-[var(--app-text-muted)]">{DATE_START} — {DATE_END} · 共 {DATE_SPAN} 天</p>
           </div>
           {/* 平台切换 */}
           <div className="glass-card rounded-2xl p-1 flex gap-1">
@@ -86,50 +133,53 @@ export function DashboardScreen() {
         <AnimatePresence mode="wait">
           {platform === "wechat" && (
             <motion.div key="wechat" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }} className="space-y-5">
-              {/* 账号筛选 */}
-              <AccountBar accounts={["全部", ...WECHAT_ACCOUNTS]} active={wAccount} onChange={setWAccount} color={PALETTE.wechat} />
+              {/* 时间与账号筛选 */}
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <TimeWindowBar active={timeWindow} onChange={setTimeWindow} color={PALETTE.wechat} />
+                <AccountBar accounts={["全部", ...WECHAT_ACCOUNTS]} active={wAccount} onChange={setWAccount} color={PALETTE.wechat} />
+              </div>
 
                   {/* KPI */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <KpiCard label="单日平均播放" value={fmt(wKpi.avgDailyPlays)} sub="播放量 ÷ 58天" trend={14} color={PALETTE.wechat} />
-                    <KpiCard label="总点赞数" value={fmt(wKpi.totalLikes)} sub="喜欢字段汇总" trend={9} color="#6366f1" />
-                    <KpiCard label="总关注量" value={fmt(wKpi.totalFollowers)} sub="视频号涨粉合计" trend={6} color="#f59e0b" />
+                    <KpiCard label="总浏览量" value={fmt(totalWechatViews)} sub={selectedRangeText} trend={14} color={PALETTE.wechat} />
+                    <KpiCard label="总点赞数" value={fmt(wKpi.totalLikes)} sub="当前窗口喜欢汇总" trend={9} color="#6366f1" />
+                    <KpiCard label="总关注量" value={fmt(wKpi.totalFollowers)} sub="当前窗口涨粉合计" trend={6} color="#f59e0b" />
                     <KpiCard label="平均完播率" value={wKpi.avgCompletion + "%"} sub="空值行已排除" trend={2} color="#10b981" />
                   </div>
 
                   {/* 趋势图 */}
                   <div className="glass-card rounded-2xl p-4">
-                    <h3 className="text-sm font-bold text-[var(--app-text)] mb-3">每日播放趋势</h3>
-                    <TrendChart platform="wechat" account={wAccount} />
+                    <h3 className="text-sm font-bold text-[var(--app-text)] mb-3">每日浏览趋势</h3>
+                    <TrendChart platform="wechat" account={wAccount} videos={wVideos} startDate={selectedRange.start} endDate={selectedRange.end} />
                   </div>
 
                   {/* 排行 */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="glass-card rounded-2xl p-4">
-                      <Top10BarChart platform="wechat" account={wAccount} />
+                      <Top10BarChart platform="wechat" account={wAccount} videos={wVideos} />
                     </div>
                     <div className="glass-card rounded-2xl p-4">
-                      <Top10MultiBar platform="wechat" account={wAccount} />
+                      <Top10MultiBar platform="wechat" account={wAccount} videos={wVideos} />
                     </div>
                   </div>
 
                   {/* 分析三列 */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="glass-card rounded-2xl p-4">
-                      <InteractionBucketChart platform="wechat" account={wAccount} />
+                      <InteractionBucketChart platform="wechat" account={wAccount} videos={wVideos} />
                     </div>
                     <div className="glass-card rounded-2xl p-4">
-                      <ContentTypeDonut platform="wechat" account={wAccount} />
+                      <ContentTypeDonut platform="wechat" account={wAccount} videos={wVideos} />
                     </div>
                     <div className="glass-card rounded-2xl p-4">
-                      <WeekdayRadar platform="wechat" account={wAccount} />
+                      <WeekdayRadar platform="wechat" account={wAccount} videos={wVideos} />
                     </div>
                   </div>
 
                   {/* 气泡图 */}
                   <div className="glass-card rounded-2xl p-4">
                     <h3 className="text-sm font-bold text-[var(--app-text)] mb-2">涨粉 × 流量 × 互动气泡图</h3>
-                    <BubbleChart platform="wechat" account={wAccount} />
+                    <BubbleChart platform="wechat" account={wAccount} videos={wVideos} />
                   </div>
 
                   {/* 账号运营总结 */}
@@ -139,36 +189,39 @@ export function DashboardScreen() {
 
           {platform === "xhs" && (
             <motion.div key="xhs" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }} className="space-y-5">
-              <AccountBar accounts={["全部", ...XHS_ACCOUNTS]} active={xAccount} onChange={setXAccount} color={PALETTE.xhs} />
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <TimeWindowBar active={timeWindow} onChange={setTimeWindow} color={PALETTE.xhs} />
+                <AccountBar accounts={["全部", ...XHS_ACCOUNTS]} active={xAccount} onChange={setXAccount} color={PALETTE.xhs} />
+              </div>
 
               {/* KPI */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <KpiCard label="单日平均曝光" value={fmt(xKpi.avgDailyExposure)} sub="曝光量 ÷ 58天" trend={11} color={PALETTE.xhs} />
-                <KpiCard label="总点赞数" value={fmt(xKpi.totalLikes)} sub="全量笔记点赞" trend={8} color="#6366f1" />
-                <KpiCard label="总涨粉数" value={fmt(xKpi.totalFollowers)} sub="涨粉字段汇总" trend={5} color="#f59e0b" />
+                <KpiCard label="总观看量" value={fmt(totalXhsViews)} sub={selectedRangeText} trend={11} color={PALETTE.xhs} />
+                <KpiCard label="总点赞数" value={fmt(xKpi.totalLikes)} sub="当前窗口笔记点赞" trend={8} color="#6366f1" />
+                <KpiCard label="总涨粉数" value={fmt(xKpi.totalFollowers)} sub="当前窗口涨粉合计" trend={5} color="#f59e0b" />
                 <KpiCard label="平均封面点击率" value={xKpi.avgCtr + "%"} sub="封面点击率均值" trend={1} color="#10b981" />
               </div>
 
               {/* 趋势图 */}
               <div className="glass-card rounded-2xl p-4">
-                <h3 className="text-sm font-bold text-[var(--app-text)] mb-3">每日曝光趋势</h3>
-                <TrendChart platform="xhs" account={xAccount} />
+                <h3 className="text-sm font-bold text-[var(--app-text)] mb-3">每日观看趋势</h3>
+                <TrendChart platform="xhs" account={xAccount} notes={xNotes} startDate={selectedRange.start} endDate={selectedRange.end} />
               </div>
 
               {/* 排行 */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="glass-card rounded-2xl p-4">
-                  <Top10BarChart platform="xhs" account={xAccount} />
+                  <Top10BarChart platform="xhs" account={xAccount} notes={xNotes} />
                 </div>
                 <div className="glass-card rounded-2xl p-4">
-                  <Top10MultiBar platform="xhs" account={xAccount} />
+                  <Top10MultiBar platform="xhs" account={xAccount} notes={xNotes} />
                 </div>
               </div>
 
               {/* 体裁对比 */}
               <div className="glass-card rounded-2xl p-4">
                 <h3 className="text-sm font-bold text-[var(--app-text)] mb-2">图文 vs 视频体裁对比</h3>
-                <GenreCompareChart account={xAccount} />
+                <GenreCompareChart account={xAccount} notes={xNotes} />
               </div>
 
               {/* 雷达 + 内容类型 (xhs用空状态) */}
@@ -195,6 +248,38 @@ export function DashboardScreen() {
 }
 
 /* ── 账号筛选条 ── */
+function TimeWindowBar({ active, onChange, color }: {
+  active: TimeWindow;
+  onChange: (value: TimeWindow) => void;
+  color: string;
+}) {
+  return (
+    <div className="glass-card rounded-2xl p-1 flex w-fit gap-1">
+      {TIME_WINDOWS.map((item) => (
+        <motion.button
+          key={item.value}
+          whileTap={{ scale: 0.94 }}
+          onClick={() => onChange(item.value)}
+          className={`relative min-w-[84px] px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1 ${
+            active === item.value ? "text-white" : "text-[var(--app-text-secondary)] hover:text-[var(--app-text)]"
+          }`}
+        >
+          {active === item.value && (
+            <motion.div
+              layoutId="time-window-pill"
+              className="absolute inset-0 rounded-xl"
+              style={{ background: color }}
+              transition={{ type: "spring", bounce: 0.28, duration: 0.35 }}
+            />
+          )}
+          <CalendarDays size={12} className="relative z-10" />
+          <span className="relative z-10">{item.label}</span>
+        </motion.button>
+      ))}
+    </div>
+  );
+}
+
 function AccountBar({ accounts, active, onChange, color }: {
   accounts: string[];
   active: string;

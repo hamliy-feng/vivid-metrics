@@ -4,6 +4,7 @@ import {
   filterWechat, interactionByBucket,
   contentTypeDistribution, weekdayStats, PALETTE,
 } from "@/lib/data";
+import type { WechatVideo } from "@/lib/data";
 import type { EChartsOption } from "echarts";
 
 const EChart = dynamic(() => import("@/components/EChart"), { ssr: false });
@@ -11,12 +12,13 @@ const EChart = dynamic(() => import("@/components/EChart"), { ssr: false });
 interface AnalyticsProps {
   platform: "wechat" | "xhs";
   account: string;
+  videos?: WechatVideo[];
 }
 
 /* ── 互动效率分组条形图 ── */
-export function InteractionBucketChart({ account }: AnalyticsProps) {
-  const videos = filterWechat(account as never);
-  const buckets = interactionByBucket(videos);
+export function InteractionBucketChart({ account, videos }: AnalyticsProps) {
+  const rows = videos ?? filterWechat(account as never);
+  const buckets = interactionByBucket(rows);
 
   const option: EChartsOption = {
     grid: { top: 24, right: 16, bottom: 8, left: 8, containLabel: true },
@@ -69,16 +71,16 @@ export function InteractionBucketChart({ account }: AnalyticsProps) {
   };
   return (
     <div>
-      <p className="text-[10px] text-[var(--app-text-muted)] mb-1 px-1">互动效率 · 按播放分段</p>
+      <p className="text-[10px] text-[var(--app-text-muted)] mb-1 px-1">互动效率 · 按浏览分段</p>
       <EChart option={option} style={{ height: 220 }} />
     </div>
   );
 }
 
 /* ── 内容类型环形图 ── */
-export function ContentTypeDonut({ platform, account }: AnalyticsProps) {
-  const videos = platform === "wechat" ? filterWechat(account as never) : [];
-  const dist = contentTypeDistribution(videos);
+export function ContentTypeDonut({ platform, account, videos }: AnalyticsProps) {
+  const rows = platform === "wechat" ? videos ?? filterWechat(account as never) : [];
+  const dist = contentTypeDistribution(rows);
 
   const option: EChartsOption = {
     tooltip: {
@@ -120,9 +122,9 @@ export function ContentTypeDonut({ platform, account }: AnalyticsProps) {
 }
 
 /* ── 星期维度雷达图 ── */
-export function WeekdayRadar({ platform, account }: AnalyticsProps) {
-  const videos = platform === "wechat" ? filterWechat(account as never) : [];
-  const stats = weekdayStats(videos);
+export function WeekdayRadar({ platform, account, videos }: AnalyticsProps) {
+  const rows = platform === "wechat" ? videos ?? filterWechat(account as never) : [];
+  const stats = weekdayStats(rows);
   const maxPlays = Math.max(...stats.map((s) => s.avgPlays), 1);
   const maxInteract = Math.max(...stats.map((s) => s.avgInteractions), 1);
   const color = platform === "wechat" ? PALETTE.wechat : PALETTE.xhs;
@@ -154,7 +156,7 @@ export function WeekdayRadar({ platform, account }: AnalyticsProps) {
       type: "radar",
       data: [
         {
-          name: "平均播放量",
+          name: "平均浏览量",
           value: stats.map((s) => s.avgPlays),
           lineStyle: { color, width: 2 },
           areaStyle: { color: color + "33" },
@@ -183,12 +185,12 @@ export function WeekdayRadar({ platform, account }: AnalyticsProps) {
 }
 
 /* ── 涨粉×流量气泡图 ── */
-export function BubbleChart({ platform, account }: AnalyticsProps) {
+export function BubbleChart({ platform, account, videos }: AnalyticsProps) {
   let seriesData: { value: [number, number, number]; name: string; itemStyle: { color: string } }[] = [];
 
   if (platform === "wechat") {
-    const videos = filterWechat(account as never);
-    seriesData = videos.map((v) => ({
+    const rows = videos ?? filterWechat(account as never);
+    seriesData = rows.map((v) => ({
       value: [v.plays, v.followers, v.likes + v.comments + v.shares],
       name: v.desc.slice(0, 20),
       itemStyle: { color: PALETTE.content[v.contentType] },
@@ -204,12 +206,12 @@ export function BubbleChart({ platform, account }: AnalyticsProps) {
       textStyle: { color: "#fff", fontSize: 11 },
       formatter: (params: unknown) => {
         const p = params as { name: string; value: [number, number, number] };
-        return `${p.name}<br/>播放: ${p.value[0].toLocaleString("zh-CN")}<br/>涨粉: ${p.value[1]}<br/>互动: ${p.value[2]}`;
+        return `${p.name}<br/>浏览: ${p.value[0].toLocaleString("zh-CN")}<br/>涨粉: ${p.value[1]}<br/>互动: ${p.value[2]}`;
       },
     },
     xAxis: {
       type: "value",
-      name: "播放量",
+      name: "浏览量",
       nameTextStyle: { fontSize: 10, color: "#a8a29e" },
       axisLabel: { fontSize: 9, color: "#a8a29e", formatter: (v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v) },
       splitLine: { lineStyle: { color: "rgba(0,0,0,0.05)", type: "dashed" } },

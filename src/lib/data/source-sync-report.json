@@ -1,0 +1,176 @@
+{
+  "generatedAt": "2026-06-10T23:46:44",
+  "wechatRows": 250,
+  "xhsRows": 350,
+  "wechatAccounts": [
+    "cheat-视频号-未匹配01",
+    "此山中",
+    "滋元堂专注",
+    "滋元堂滋补",
+    "老黄",
+    "菌语"
+  ],
+  "wechatCheatAccounts": [
+    "cheat-视频号-未匹配01"
+  ],
+  "xhsAccounts": [
+    "18",
+    "二胎妈",
+    "菇菇",
+    "黄师傅"
+  ],
+  "wechat": {
+    "imported": [
+      {
+        "file": "D:\\3.数据分析\\wechat-video\\vx-fans-01\\视频号动态数据明细 (1).csv",
+        "account": "此山中",
+        "rows": 9,
+        "platformId": "vx-fans-01",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "D:\\3.数据分析\\wechat-video\\vx-fans-02\\视频号动态数据明细 (2).csv",
+        "account": "滋元堂专注",
+        "rows": 27,
+        "platformId": "vx-fans-02",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "D:\\3.数据分析\\wechat-video\\vx-new-02\\视频号动态数据明细新.csv",
+        "account": "老黄",
+        "rows": 31,
+        "platformId": "vx-new-02",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "D:\\3.数据分析\\wechat-video\\七哥滋补\\视频号动态数据明细 (3).csv",
+        "account": "滋元堂滋补",
+        "rows": 101,
+        "platformId": "七哥滋补",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "D:\\3.数据分析\\wechat-video\\黄师傅\\视频号动态数据明细.csv",
+        "account": "菌语",
+        "rows": 8,
+        "platformId": "黄师傅",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "C:\\Users\\zyt18\\Downloads\\视频号动态数据明细 (1).csv",
+        "account": "滋元堂专注",
+        "rows": 29,
+        "platformId": "download-vx-fans-02",
+        "mode": "latest_file"
+      },
+      {
+        "file": "D:\\dl\\视频号动态数据明细.csv",
+        "account": "cheat-视频号-未匹配01",
+        "rows": 10,
+        "platformId": "cheat-wechat-unknown-01",
+        "mode": "cheat_parallel"
+      },
+      {
+        "file": "C:\\Users\\zyt18\\Downloads\\视频号动态数据明细-2.csv",
+        "account": "菌语",
+        "rows": 10,
+        "platformId": "download-vx-junyu",
+        "mode": "latest_file"
+      },
+      {
+        "file": "C:\\Users\\zyt18\\Downloads\\视频号动态数据明细 (1)-2.csv",
+        "account": "此山中",
+        "rows": 13,
+        "platformId": "download-vx-cishanzhong",
+        "mode": "latest_file"
+      },
+      {
+        "file": "D:\\3.数据分析\\视频号动态数据明细 (5).csv",
+        "account": "滋元堂滋补",
+        "rows": 123,
+        "platformId": "data-vx-ziyuantang-zibu",
+        "mode": "latest_file"
+      }
+    ],
+    "skipped": [
+      {
+        "file": "D:\\3.数据分析\\视频号动态数据明细(1).csv",
+        "reason": "duplicate_source_file",
+        "duplicateOf": "C:\\Users\\zyt18\\Downloads\\视频号动态数据明细-2.csv",
+        "platformId": "data-vx-junyu-duplicate-candidate",
+        "mode": "latest_file"
+      },
+      {
+        "file": "D:\\3.数据分析\\wechat-video\\vx-new-01\\视频号视频详情数据.csv",
+        "reason": "unmapped_wechat_csv",
+        "rowsWithVideoDesc": 0
+      },
+      {
+        "file": "D:\\3.数据分析\\wechat-video\\视频号动态数据明细.csv",
+        "reason": "unmapped_wechat_csv",
+        "rowsWithVideoDesc": 64
+      }
+    ]
+  },
+  "xiaohongshu": {
+    "imported": [
+      {
+        "file": "D:\\3.数据分析\\xiaohongshu\\xhs-new-01\\黄师傅不识菌.xlsx",
+        "account": "黄师傅",
+        "rows": 64,
+        "platformId": "xhs-new-01",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "D:\\3.数据分析\\xiaohongshu\\xhs-new-02\\十八采摘日记.xlsx",
+        "account": "18",
+        "rows": 78,
+        "platformId": "xhs-new-02",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "D:\\3.数据分析\\xiaohongshu\\xhs-new-02\\十八.xlsx",
+        "account": "18",
+        "rows": 29,
+        "platformId": "xhs-new-02",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "D:\\3.数据分析\\xiaohongshu\\xhs-new-03\\小阿刘的山野菜谱.xlsx",
+        "account": "菇菇",
+        "rows": 55,
+        "platformId": "xhs-new-03",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "D:\\3.数据分析\\xiaohongshu\\xhs-new-04\\二胎妈.xlsx",
+        "account": "二胎妈",
+        "rows": 106,
+        "platformId": "xhs-new-04",
+        "mode": "indexed_history"
+      },
+      {
+        "file": "D:\\3.数据分析\\黄师傅.xlsx",
+        "account": "黄师傅",
+        "rows": 13,
+        "platformId": "data-xhs-huangshifu",
+        "mode": "latest_file"
+      },
+      {
+        "file": "D:\\3.数据分析\\18.xlsx",
+        "account": "18",
+        "rows": 101,
+        "platformId": "data-xhs-18",
+        "mode": "latest_file"
+      },
+      {
+        "file": "D:\\3.数据分析\\菇菇.xlsx",
+        "account": "菇菇",
+        "rows": 11,
+        "platformId": "data-xhs-gugu",
+        "mode": "latest_file"
+      }
+    ],
+    "skipped": []
+  }
+}

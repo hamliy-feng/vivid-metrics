@@ -9,13 +9,15 @@ const EChart = dynamic(() => import("@/components/EChart"), { ssr: false });
 interface TopBarProps {
   platform: "wechat" | "xhs";
   account: string;
+  videos?: WechatVideo[];
+  notes?: XhsNote[];
 }
 
-export function Top10BarChart({ platform, account }: TopBarProps) {
+export function Top10BarChart({ platform, account, videos, notes }: TopBarProps) {
   let items: Array<{ label: string; plays: number; extra: string }> = [];
   if (platform === "wechat") {
-    const videos = filterWechat(account as never) as WechatVideo[];
-    items = [...videos]
+    const rows = videos ?? (filterWechat(account as never) as WechatVideo[]);
+    items = [...rows]
       .sort((a, b) => b.plays - a.plays)
       .slice(0, 10)
       .map((v) => ({
@@ -24,8 +26,8 @@ export function Top10BarChart({ platform, account }: TopBarProps) {
         extra: `完播率: ${v.completion !== null ? v.completion + "%" : "—"} · ${v.publishDate}`,
       }));
   } else {
-    const notes = filterXhs(account as never) as XhsNote[];
-    items = [...notes]
+    const rows = notes ?? (filterXhs(account as never) as XhsNote[]);
+    items = [...rows]
       .sort((a, b) => b.views - a.views)
       .slice(0, 10)
       .map((n) => ({
@@ -36,7 +38,7 @@ export function Top10BarChart({ platform, account }: TopBarProps) {
   }
 
   const color = platform === "wechat" ? PALETTE.wechat : PALETTE.xhs;
-  const metricLabel = platform === "wechat" ? "播放量" : "观看量";
+  const metricLabel = platform === "wechat" ? "浏览量" : "观看量";
 
   const option: EChartsOption = {
     grid: { top: 8, right: 16, bottom: 8, left: 8, containLabel: true },
@@ -76,19 +78,19 @@ export function Top10BarChart({ platform, account }: TopBarProps) {
 }
 
 /* ── 多维柱图 ── */
-export function Top10MultiBar({ platform, account }: TopBarProps) {
+export function Top10MultiBar({ platform, account, videos, notes }: TopBarProps) {
   let items: Array<{ label: string; plays: number; likes: number; comments: number }> = [];
   if (platform === "wechat") {
-    const videos = filterWechat(account as never) as WechatVideo[];
-    items = [...videos].sort((a, b) => b.plays - a.plays).slice(0, 10).map((v, i) => ({
+    const rows = videos ?? (filterWechat(account as never) as WechatVideo[]);
+    items = [...rows].sort((a, b) => b.plays - a.plays).slice(0, 10).map((v, i) => ({
       label: `#${i + 1}`,
       plays: v.plays,
       likes: v.likes,
       comments: v.comments,
     }));
   } else {
-    const notes = filterXhs(account as never) as XhsNote[];
-    items = [...notes].sort((a, b) => b.views - a.views).slice(0, 10).map((n, i) => ({
+    const rows = notes ?? (filterXhs(account as never) as XhsNote[]);
+    items = [...rows].sort((a, b) => b.views - a.views).slice(0, 10).map((n, i) => ({
       label: `#${i + 1}`,
       plays: n.views,
       likes: n.likes,
@@ -102,12 +104,12 @@ export function Top10MultiBar({ platform, account }: TopBarProps) {
     tooltip: { trigger: "axis", backgroundColor: "rgba(41,37,36,0.92)", borderColor: "transparent", textStyle: { color: "#fff", fontSize: 11 } },
     xAxis: { type: "category", data: items.map((i) => i.label), axisLabel: { fontSize: 10, color: "#a8a29e" }, axisTick: { show: false }, axisLine: { lineStyle: { color: "rgba(0,0,0,0.06)" } } },
     yAxis: [
-      { type: "value", name: platform === "wechat" ? "播放量" : "观看量", axisLabel: { fontSize: 9, color: "#a8a29e", formatter: (v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v) }, splitLine: { lineStyle: { color: "rgba(0,0,0,0.05)", type: "dashed" } } },
+      { type: "value", name: platform === "wechat" ? "浏览量" : "观看量", axisLabel: { fontSize: 9, color: "#a8a29e", formatter: (v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v) }, splitLine: { lineStyle: { color: "rgba(0,0,0,0.05)", type: "dashed" } } },
       { type: "value", name: "互动", axisLabel: { fontSize: 9, color: "#a8a29e", formatter: (v: number) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v) }, splitLine: { show: false } },
     ],
     series: [
       {
-        name: platform === "wechat" ? "播放量" : "观看量",
+        name: platform === "wechat" ? "浏览量" : "观看量",
         type: "bar",
         yAxisIndex: 0,
         data: items.map((i) => i.plays),

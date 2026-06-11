@@ -56,23 +56,58 @@ export interface XhsNote {
   contentType: ContentType;
 }
 
-// ── 真实微信数据
-export const wechatVideos: WechatVideo[] = (realData as {
+type WechatVideoSource = {
   account: string; desc: string; publishDate: string;
   plays: number; likes: number; comments: number;
   shares: number; followers: number;
   completion: number | null; avgDuration: number;
-}[]).map((r) => ({
+};
+
+type XhsNoteSource = {
+  account: string; title: string; publishDate: string; exposure: number; views: number;
+  ctr: number; likes: number; comments: number; saves: number;
+  followers: number; shares: number; avgDuration: number; genre: "图文" | "视频";
+};
+
+const wechatSourceRows = realData as WechatVideoSource[];
+const xhsSourceRows = xhsRealData as XhsNoteSource[];
+
+const WECHAT_ACCOUNT_ORDER = ["滋元堂滋补", "滋元堂专注", "老黄", "菌语", "此山中", "cheat-视频号-未匹配01"];
+const XHS_ACCOUNT_ORDER = ["黄师傅", "18", "菇菇", "二胎妈"];
+
+function orderedAccounts(rows: { account: string }[], preferred: string[]): string[] {
+  const names = new Set(rows.map((r) => r.account));
+  const ordered = preferred.filter((name) => names.has(name));
+  const extra = [...names].filter((name) => !preferred.includes(name)).sort((a, b) => a.localeCompare(b, "zh-CN"));
+  return [...ordered, ...extra];
+}
+
+function daysInclusive(start: string, end: string): number {
+  const startMs = new Date(start + "T00:00:00Z").getTime();
+  const endMs = new Date(end + "T00:00:00Z").getTime();
+  return Math.max(1, Math.round((endMs - startMs) / 86400000) + 1);
+}
+
+function dateWindow(rows: { publishDate: string }[]): { start: string; end: string; span: number } {
+  const dates = rows.map((r) => r.publishDate).filter(Boolean).sort();
+  const start = dates[0] || "2026-04-01";
+  const end = dates[dates.length - 1] || start;
+  return { start, end, span: daysInclusive(start, end) };
+}
+
+// ── 真实微信数据
+export const wechatVideos: WechatVideo[] = wechatSourceRows.map((r) => ({
   ...r,
   weekday: dateToWeekday(r.publishDate),
   contentType: tagContent(r.desc),
 }));
 
-export const DATE_START = "2026-04-01";
-export const DATE_END   = "2026-05-28";
-export const DATE_SPAN  = 58;
-export const WECHAT_ACCOUNTS = ["滋元堂滋补", "滋元堂专注", "老黄", "菌语", "此山中"] as const;
-export const XHS_ACCOUNTS    = ["每日一菌菇", "每日一菇", "二胎妈", "十八采摘日记"] as const;
+const WINDOW = dateWindow([...wechatSourceRows, ...xhsSourceRows]);
+export const DATE_START = WINDOW.start;
+export const DATE_END   = WINDOW.end;
+export const DATE_SPAN  = WINDOW.span;
+export const WECHAT_ACCOUNTS = orderedAccounts(wechatSourceRows, WECHAT_ACCOUNT_ORDER);
+export const XHS_ACCOUNTS    = orderedAccounts(xhsSourceRows, XHS_ACCOUNT_ORDER);
 export const CONTENT_TYPES: ContentType[] = ["菌菇类", "旅行类", "虫草类", "其他"];
 export const WEEKDAY_LABELS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
@@ -168,24 +203,19 @@ export function xhsKpi(notes: XhsNote[]) {
 export function xhsGenreComparison(notes: XhsNote[]) {
   return (["图文", "视频"] as const).map((g) => {
     const group = notes.filter((n) => n.genre === g);
-    if (!group.length) return { genre: g, avgExposure: 0, likeRate: 0, followerRate: 0 };
+    if (!group.length) return { genre: g, avgViews: 0, likeRate: 0, followerRate: 0 };
     const tv = group.reduce((s, n) => s + n.views, 0);
-    const te = group.reduce((s, n) => s + n.exposure, 0);
     return {
       genre: g,
-      avgExposure:  Math.round(te / group.length),
-      likeRate:     +(group.reduce((s, n) => s + n.likes, 0) / tv * 100).toFixed(2),
-      followerRate: +(group.reduce((s, n) => s + n.followers, 0) / te * 100).toFixed(3),
+      avgViews:     Math.round(tv / group.length),
+      likeRate:     tv ? +(group.reduce((s, n) => s + n.likes, 0) / tv * 100).toFixed(2) : 0,
+      followerRate: tv ? +(group.reduce((s, n) => s + n.followers, 0) / tv * 100).toFixed(3) : 0,
     };
   });
 }
 
 // ── 小红书真实数据 ────────────────────────────────────
-export const xhsNotes: XhsNote[] = (xhsRealData as {
-  account: string; title: string; publishDate: string; exposure: number; views: number;
-  ctr: number; likes: number; comments: number; saves: number;
-  followers: number; shares: number; avgDuration: number; genre: "图文" | "视频";
-}[]).map((r) => ({
+export const xhsNotes: XhsNote[] = xhsSourceRows.map((r) => ({
   account: r.account,
   exposure: r.exposure, views: r.views, ctr: r.ctr,
   likes: r.likes, comments: r.comments, saves: r.saves,

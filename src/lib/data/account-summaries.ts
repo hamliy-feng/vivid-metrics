@@ -105,7 +105,7 @@ export const accountSummaries: AccountSummary[] = [
   },
   // ── 小红书 ──
   {
-    account: "每日一菌菇",
+    account: "菇菇",
     platform: "xhs",
     good: [
       "已有 v1 小红书图文专属 rubric，校准基础最好",
@@ -124,7 +124,7 @@ export const accountSummaries: AccountSummary[] = [
     ],
   },
   {
-    account: "每日一菇",
+    account: "黄师傅",
     platform: "xhs",
     good: [
       "52 条笔记已脱离 cold-start，baseline 扎实",
@@ -143,7 +143,7 @@ export const accountSummaries: AccountSummary[] = [
     ],
   },
   {
-    account: "十八采摘日记",
+    account: "18",
     platform: "xhs",
     good: [
       "图文笔记互动率 11.8%（远超视频的 3.1%），图文方向正确",

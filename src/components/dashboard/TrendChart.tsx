@@ -25,6 +25,10 @@ function dailyViews(notes: XhsNote[]): Record<string, number> {
   return map;
 }
 
+function rowDate(row: { publishDate: string; metricDate?: string }): string {
+  return row.metricDate || row.publishDate;
+}
+
 export function TrendChart({ platform, account, videos, notes, startDate = DATE_START, endDate = DATE_END }: TrendChartProps) {
   const dates = dateRange(startDate, endDate);
 
@@ -34,7 +38,8 @@ export function TrendChart({ platform, account, videos, notes, startDate = DATE_
     const rows = videos ?? filterWechat(account as never);
     dayMap = dailyPlays(rows);
     rowCountByDate = rows.reduce<Record<string, number>>((map, row) => {
-      map[row.publishDate] = (map[row.publishDate] || 0) + 1;
+      const date = rowDate(row);
+      map[date] = (map[date] || 0) + 1;
       return map;
     }, {});
   } else {
@@ -49,6 +54,7 @@ export function TrendChart({ platform, account, videos, notes, startDate = DATE_
   const values = dates.map((d) => dayMap[d] ?? 0);
   const color = platform === "wechat" ? PALETTE.wechat : PALETTE.xhs;
   const label = platform === "wechat" ? "浏览量" : "观看量";
+  const countLabel = platform === "wechat" ? "视频" : "发布";
 
   const option: EChartsOption = {
     grid: { top: 16, right: 16, bottom: 28, left: 48 },
@@ -60,7 +66,7 @@ export function TrendChart({ platform, account, videos, notes, startDate = DATE_
       formatter: (params: unknown) => {
         const p = (params as { axisValue: string; value: number }[])[0];
         const cnt = rowCountByDate[p.axisValue] || 0;
-        return `<b>${p.axisValue}</b><br/>${label}: ${p.value.toLocaleString("zh-CN")}<br/>发布: ${cnt} 条`;
+        return `<b>${p.axisValue}</b><br/>${label}: ${p.value.toLocaleString("zh-CN")}<br/>${countLabel}: ${cnt} 条`;
       },
     },
     xAxis: {

@@ -23,7 +23,7 @@ export function Top10BarChart({ platform, account, videos, notes }: TopBarProps)
       .map((v) => ({
         label: v.desc.length > 18 ? v.desc.slice(0, 18) + "…" : v.desc,
         plays: v.plays,
-        extra: `完播率: ${v.completion !== null ? v.completion + "%" : "—"} · ${v.publishDate}`,
+        extra: `完播率: ${v.completion !== null ? v.completion + "%" : "—"} · 增量日 ${v.metricDate || v.publishDate} · 发布 ${v.publishDate}`,
       }));
   } else {
     const rows = notes ?? (filterXhs(account as never) as XhsNote[]);

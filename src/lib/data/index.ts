@@ -1,4 +1,5 @@
 import realData from "./real-wechat-data.json";
+import wechatTrafficData from "./wechat-traffic-data.json";
 import xhsRealData from "./xhs-real.json";
 import kuaishouRealData from "./kuaishou-real.json";
 import douyinRealData from "./douyin-real.json";
@@ -26,6 +27,7 @@ function tagContent(text: string): ContentType {
 // ── 类型定义
 export interface WechatVideo {
   account: string;
+  videoId?: string;
   desc: string;
   plays: number;
   likes: number;
@@ -35,6 +37,13 @@ export interface WechatVideo {
   completion: number | null;
   avgDuration: number;
   publishDate: string;
+  metricDate?: string;
+  snapshotDate?: string;
+  cumulativePlays?: number;
+  cumulativeLikes?: number;
+  cumulativeComments?: number;
+  cumulativeShares?: number;
+  cumulativeFollowers?: number;
   weekday: number;
   contentType: ContentType;
 }
@@ -57,10 +66,13 @@ export interface XhsNote {
 }
 
 type WechatVideoSource = {
-  account: string; desc: string; publishDate: string;
+  account: string; videoId?: string; desc: string; publishDate: string;
+  metricDate?: string; snapshotDate?: string;
   plays: number; likes: number; comments: number;
   shares: number; followers: number;
   completion: number | null; avgDuration: number;
+  cumulativePlays?: number; cumulativeLikes?: number; cumulativeComments?: number;
+  cumulativeShares?: number; cumulativeFollowers?: number;
 };
 
 type XhsNoteSource = {
@@ -70,6 +82,7 @@ type XhsNoteSource = {
 };
 
 const wechatSourceRows = realData as WechatVideoSource[];
+const wechatTrafficSourceRows = wechatTrafficData as WechatVideoSource[];
 const xhsSourceRows = xhsRealData as XhsNoteSource[];
 
 const WECHAT_ACCOUNT_ORDER = ["滋元堂滋补", "滋元堂专注", "老黄", "菌语", "此山中", "cheat-视频号-未匹配01"];
@@ -88,8 +101,12 @@ function daysInclusive(start: string, end: string): number {
   return Math.max(1, Math.round((endMs - startMs) / 86400000) + 1);
 }
 
-function dateWindow(rows: { publishDate: string }[]): { start: string; end: string; span: number } {
-  const dates = rows.map((r) => r.publishDate).filter(Boolean).sort();
+function rowDate(row: { publishDate: string; metricDate?: string }): string {
+  return row.metricDate || row.publishDate;
+}
+
+function dateWindow(rows: { publishDate: string; metricDate?: string }[]): { start: string; end: string; span: number } {
+  const dates = rows.map(rowDate).filter(Boolean).sort();
   const start = dates[0] || "2026-04-01";
   const end = dates[dates.length - 1] || start;
   return { start, end, span: daysInclusive(start, end) };
@@ -101,8 +118,13 @@ export const wechatVideos: WechatVideo[] = wechatSourceRows.map((r) => ({
   weekday: dateToWeekday(r.publishDate),
   contentType: tagContent(r.desc),
 }));
+export const wechatTrafficVideos: WechatVideo[] = wechatTrafficSourceRows.map((r) => ({
+  ...r,
+  weekday: dateToWeekday(rowDate(r)),
+  contentType: tagContent(r.desc),
+}));
 
-const WINDOW = dateWindow([...wechatSourceRows, ...xhsSourceRows]);
+const WINDOW = dateWindow([...wechatSourceRows, ...wechatTrafficSourceRows, ...xhsSourceRows]);
 export const DATE_START = WINDOW.start;
 export const DATE_END   = WINDOW.end;
 export const DATE_SPAN  = WINDOW.span;
@@ -122,6 +144,10 @@ export function filterWechat(account: string): WechatVideo[] {
   if (account === "全部") return wechatVideos;
   return wechatVideos.filter((v) => v.account === account);
 }
+export function filterWechatTraffic(account: string): WechatVideo[] {
+  if (account === "全部") return wechatTrafficVideos;
+  return wechatTrafficVideos.filter((v) => v.account === account);
+}
 export function filterXhs(account: string): XhsNote[] {
   if (account === "全部") return xhsNotes;
   return xhsNotes.filter((n) => n.account === account);
@@ -136,7 +162,10 @@ export function dateRange(start: string, end: string): string[] {
 }
 export function dailyPlays(videos: WechatVideo[]): Record<string, number> {
   const map: Record<string, number> = {};
-  for (const v of videos) map[v.publishDate] = (map[v.publishDate] || 0) + v.plays;
+  for (const v of videos) {
+    const date = rowDate(v);
+    map[date] = (map[date] || 0) + v.plays;
+  }
   return map;
 }
 export function dailyExposure(notes: XhsNote[]): Record<string, number> {

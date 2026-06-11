@@ -34,6 +34,7 @@ FIELD_LIKES = "\u559c\u6b22"
 FIELD_COMMENTS = "\u8bc4\u8bba\u91cf"
 FIELD_SHARES = "\u5206\u4eab\u91cf"
 FIELD_FOLLOWERS = "\u5173\u6ce8\u91cf"
+WECHAT_TRAFFIC_FIELDS = ("plays", "likes", "comments", "shares", "followers")
 
 FIELD_NOTE_TITLE = "\u7b14\u8bb0\u6807\u9898"
 FIELD_NOTE_TIME = "\u9996\u6b21\u53d1\u5e03\u65f6\u95f4"
@@ -89,9 +90,20 @@ WECHAT_FILE_SOURCES = (
         "download-vx-fans-02",
     ),
     FileSourceConfig(
+        DOWNLOADS_ROOT / "\u89c6\u9891\u53f7\u52a8\u6001\u6570\u636e\u660e\u7ec6 (3).csv",
+        "\u6ecb\u5143\u5802\u4e13\u6ce8",
+        "download-vx-fans-02-20260611",
+    ),
+    FileSourceConfig(
         DL_ROOT / "\u89c6\u9891\u53f7\u52a8\u6001\u6570\u636e\u660e\u7ec6.csv",
         "cheat-\u89c6\u9891\u53f7-\u672a\u5339\u914d01",
         "cheat-wechat-unknown-01",
+        "cheat_parallel",
+    ),
+    FileSourceConfig(
+        DL_ROOT / "\u89c6\u9891\u53f7\u52a8\u6001\u6570\u636e\u660e\u7ec6 (1).csv",
+        "cheat-\u89c6\u9891\u53f7-\u672a\u5339\u914d01",
+        "cheat-wechat-unknown-01-20260611",
         "cheat_parallel",
     ),
     FileSourceConfig(
@@ -209,6 +221,10 @@ def file_digest(path: Path) -> str:
     return digest.hexdigest()
 
 
+def file_snapshot_at(path: Path) -> datetime:
+    return datetime.fromtimestamp(path.stat().st_mtime)
+
+
 def add_wechat_file(
     items: dict[tuple[str, str, str], dict[str, Any]],
     path: Path,
@@ -219,6 +235,7 @@ def add_wechat_file(
     platform_id: str,
     mode: str,
     seen_file_hashes: dict[str, str] | None = None,
+    snapshots: list[dict[str, Any]] | None = None,
 ) -> None:
     if not path.exists():
         skipped.append({"file": str(path), "reason": "missing_source_file", "platformId": platform_id, "mode": mode})
@@ -238,6 +255,8 @@ def add_wechat_file(
         seen_file_hashes[digest] = str(path)
 
     rows = read_csv_rows(path)
+    snapshot_at = file_snapshot_at(path)
+    snapshot_date = snapshot_at.strftime("%Y-%m-%d")
     count = 0
     for row in rows:
         desc = clean_text(row.get(FIELD_VIDEO_DESC))
@@ -247,6 +266,7 @@ def add_wechat_file(
         video_id = clean_text(row.get(FIELD_VIDEO_ID))
         item = {
             "account": account,
+            "videoId": video_id,
             "desc": desc,
             "publishDate": publish_date,
             "plays": to_int(row.get(FIELD_PLAYS)),
@@ -256,18 +276,72 @@ def add_wechat_file(
             "followers": to_int(row.get(FIELD_FOLLOWERS)),
             "completion": parse_percent(row.get(FIELD_COMPLETION)),
             "avgDuration": round(to_number(row.get(FIELD_AVG_DURATION)), 2),
+            "snapshotDate": snapshot_date,
         }
         key = (account, video_id or desc, publish_date)
         items[key] = item
+        if snapshots is not None:
+            snapshots.append({
+                **item,
+                "snapshotAt": snapshot_at.isoformat(timespec="seconds"),
+                "sourcePlatformId": platform_id,
+            })
         count += 1
     imported.append({"file": str(path), "account": account, "rows": count, "platformId": platform_id, "mode": mode})
 
 
-def sync_wechat(wechat_root: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def build_wechat_traffic_rows(snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for snapshot in snapshots:
+        key = (snapshot["account"], snapshot.get("videoId") or snapshot["desc"])
+        grouped.setdefault(key, []).append(snapshot)
+
+    traffic_rows: list[dict[str, Any]] = []
+    for group in grouped.values():
+        previous: dict[str, Any] | None = None
+        for snapshot in sorted(group, key=lambda r: (r["snapshotAt"], r["snapshotDate"])):
+            if previous is None:
+                if snapshot["snapshotDate"] != snapshot["publishDate"]:
+                    previous = snapshot
+                    continue
+                deltas = {field: snapshot[field] for field in WECHAT_TRAFFIC_FIELDS}
+            else:
+                deltas = {
+                    field: max(0, snapshot[field] - previous.get(field, 0))
+                    for field in WECHAT_TRAFFIC_FIELDS
+                }
+
+            if any(deltas.values()):
+                traffic_rows.append({
+                    "account": snapshot["account"],
+                    "videoId": snapshot.get("videoId", ""),
+                    "desc": snapshot["desc"],
+                    "publishDate": snapshot["publishDate"],
+                    "metricDate": snapshot["snapshotDate"],
+                    "plays": deltas["plays"],
+                    "likes": deltas["likes"],
+                    "comments": deltas["comments"],
+                    "shares": deltas["shares"],
+                    "followers": deltas["followers"],
+                    "completion": snapshot["completion"],
+                    "avgDuration": snapshot["avgDuration"],
+                    "cumulativePlays": snapshot["plays"],
+                    "cumulativeLikes": snapshot["likes"],
+                    "cumulativeComments": snapshot["comments"],
+                    "cumulativeShares": snapshot["shares"],
+                    "cumulativeFollowers": snapshot["followers"],
+                })
+            previous = snapshot
+
+    return sorted(traffic_rows, key=lambda r: (r["metricDate"], r["plays"]), reverse=True)
+
+
+def sync_wechat(wechat_root: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     items: dict[tuple[str, str, str], dict[str, Any]] = {}
     imported: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     seen_file_hashes: dict[str, str] = {}
+    snapshots: list[dict[str, Any]] = []
 
     for source in WECHAT_SOURCES:
         files = collect_files(wechat_root, source)
@@ -276,6 +350,7 @@ def sync_wechat(wechat_root: Path) -> tuple[list[dict[str, Any]], dict[str, Any]
                 items, path, source.account, imported, skipped,
                 platform_id=source.folder, mode="indexed_history",
                 seen_file_hashes=seen_file_hashes,
+                snapshots=snapshots,
             )
 
     for source in WECHAT_FILE_SOURCES:
@@ -283,6 +358,7 @@ def sync_wechat(wechat_root: Path) -> tuple[list[dict[str, Any]], dict[str, Any]
             items, source.path, source.account, imported, skipped,
             platform_id=source.platform_id, mode=source.mode,
             seen_file_hashes=seen_file_hashes,
+            snapshots=snapshots,
         )
 
     configured_dirs = {source.folder for source in WECHAT_SOURCES}
@@ -299,7 +375,8 @@ def sync_wechat(wechat_root: Path) -> tuple[list[dict[str, Any]], dict[str, Any]
         })
 
     data = sorted(items.values(), key=lambda r: (r["publishDate"], r["plays"]), reverse=True)
-    return data, {"imported": imported, "skipped": skipped}
+    traffic_data = build_wechat_traffic_rows(snapshots)
+    return data, traffic_data, {"imported": imported, "skipped": skipped}
 
 
 def iter_xlsx_rows(path: Path) -> list[dict[str, Any]]:
@@ -429,16 +506,18 @@ def main() -> None:
     if not args.xhs_root.exists():
         raise SystemExit(f"Xiaohongshu source root not found: {args.xhs_root}")
 
-    wechat_data, wechat_report = sync_wechat(args.wechat_root)
+    wechat_data, wechat_traffic_data, wechat_report = sync_wechat(args.wechat_root)
     xhs_data, xhs_report = sync_xhs(args.xhs_root)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     write_json(args.output_dir / "real-wechat-data.json", wechat_data)
+    write_json(args.output_dir / "wechat-traffic-data.json", wechat_traffic_data)
     write_json(args.output_dir / "xhs-real.json", xhs_data)
 
     report = {
         "generatedAt": datetime.now().isoformat(timespec="seconds"),
         "wechatRows": len(wechat_data),
+        "wechatTrafficRows": len(wechat_traffic_data),
         "xhsRows": len(xhs_data),
         "wechatAccounts": sorted({row["account"] for row in wechat_data}),
         "wechatCheatAccounts": sorted({row["account"] for row in wechat_data if row["account"].startswith("cheat-")}),

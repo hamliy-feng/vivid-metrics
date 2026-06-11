@@ -1,6 +1,7 @@
 {
-  "generatedAt": "2026-06-10T23:46:44",
-  "wechatRows": 250,
+  "generatedAt": "2026-06-11T20:44:19",
+  "wechatRows": 257,
+  "wechatTrafficRows": 152,
   "xhsRows": 350,
   "wechatAccounts": [
     "cheat-视频号-未匹配01",
@@ -64,10 +65,24 @@
         "mode": "latest_file"
       },
       {
+        "file": "C:\\Users\\zyt18\\Downloads\\视频号动态数据明细 (3).csv",
+        "account": "滋元堂专注",
+        "rows": 19,
+        "platformId": "download-vx-fans-02-20260611",
+        "mode": "latest_file"
+      },
+      {
         "file": "D:\\dl\\视频号动态数据明细.csv",
         "account": "cheat-视频号-未匹配01",
         "rows": 10,
         "platformId": "cheat-wechat-unknown-01",
+        "mode": "cheat_parallel"
+      },
+      {
+        "file": "D:\\dl\\视频号动态数据明细 (1).csv",
+        "account": "cheat-视频号-未匹配01",
+        "rows": 11,
+        "platformId": "cheat-wechat-unknown-01-20260611",
         "mode": "cheat_parallel"
       },
       {

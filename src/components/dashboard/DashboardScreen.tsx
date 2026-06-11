@@ -8,7 +8,7 @@ import { Top10BarChart, Top10MultiBar } from "./RankingCharts";
 import { InteractionBucketChart, ContentTypeDonut, WeekdayRadar, BubbleChart } from "./AnalyticsCharts";
 import { GenreCompareChart } from "./GenreCompare";
 import {
-  filterWechat, filterXhs, wechatKpi, xhsKpi,
+  filterWechat, filterWechatTraffic, filterXhs, wechatKpi, xhsKpi,
   DATE_END, DATE_SPAN, DATE_START,
   WECHAT_ACCOUNTS, XHS_ACCOUNTS, PALETTE,
 } from "@/lib/data";
@@ -54,8 +54,15 @@ function resolveTimeWindow(window: TimeWindow) {
   };
 }
 
-function filterByDate<T extends { publishDate: string }>(rows: T[], start: string, end: string): T[] {
-  return rows.filter((row) => row.publishDate >= start && row.publishDate <= end);
+function metricDate(row: { publishDate: string; metricDate?: string }): string {
+  return row.metricDate || row.publishDate;
+}
+
+function filterByDate<T extends { publishDate: string; metricDate?: string }>(rows: T[], start: string, end: string): T[] {
+  return rows.filter((row) => {
+    const date = metricDate(row);
+    return date >= start && date <= end;
+  });
 }
 
 function rangeText(start: string, end: string, label: string): string {
@@ -72,11 +79,18 @@ export function DashboardScreen() {
   const selectedRangeText = rangeText(selectedRange.start, selectedRange.end, selectedRange.label);
 
   const wBaseVideos = useMemo(() => filterWechat(wAccount as never), [wAccount]);
+  const wBaseTrafficVideos = useMemo(() => filterWechatTraffic(wAccount as never), [wAccount]);
   const xBaseNotes = useMemo(() => filterXhs(xAccount as never), [xAccount]);
-  const wVideos = useMemo(
+  const wPublishedVideos = useMemo(
     () => filterByDate(wBaseVideos, selectedRange.start, selectedRange.end),
     [wBaseVideos, selectedRange.start, selectedRange.end],
   );
+  const wTrafficVideos = useMemo(
+    () => filterByDate(wBaseTrafficVideos, selectedRange.start, selectedRange.end),
+    [wBaseTrafficVideos, selectedRange.start, selectedRange.end],
+  );
+  const hasWechatTrafficRows = wTrafficVideos.length > 0;
+  const wVideos = hasWechatTrafficRows ? wTrafficVideos : wPublishedVideos;
   const xNotes = useMemo(
     () => filterByDate(xBaseNotes, selectedRange.start, selectedRange.end),
     [xBaseNotes, selectedRange.start, selectedRange.end],
@@ -85,6 +99,7 @@ export function DashboardScreen() {
   const xKpi = xhsKpi(xNotes);
   const totalWechatViews = wVideos.reduce((sum, video) => sum + video.plays, 0);
   const totalXhsViews = xNotes.reduce((sum, note) => sum + note.views, 0);
+  const wechatRangeText = `${selectedRangeText} · ${hasWechatTrafficRows ? "区间差值增量" : "按发布时间"}`;
 
   const isActive = (p: Platform) => platform === p;
 
@@ -141,10 +156,10 @@ export function DashboardScreen() {
 
                   {/* KPI */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <KpiCard label="总浏览量" value={fmt(totalWechatViews)} sub={selectedRangeText} trend={14} color={PALETTE.wechat} />
+                    <KpiCard label="总浏览量" value={fmt(totalWechatViews)} sub={wechatRangeText} trend={14} color={PALETTE.wechat} />
                     <KpiCard label="总点赞数" value={fmt(wKpi.totalLikes)} sub="当前窗口喜欢汇总" trend={9} color="#6366f1" />
                     <KpiCard label="总关注量" value={fmt(wKpi.totalFollowers)} sub="当前窗口涨粉合计" trend={6} color="#f59e0b" />
-                    <KpiCard label="平均完播率" value={wKpi.avgCompletion + "%"} sub="空值行已排除" trend={2} color="#10b981" />
+                    <CompletionProgressCard value={wKpi.avgCompletion} />
                   </div>
 
                   {/* 趋势图 */}
@@ -248,6 +263,66 @@ export function DashboardScreen() {
 }
 
 /* ── 账号筛选条 ── */
+const COMPLETION_BANDS = [
+  { min: 0, max: 20, color: "#ef4444", label: "<20%" },
+  { min: 20, max: 30, color: "#f59e0b", label: "20-30%" },
+  { min: 30, max: 40, color: "#10b981", label: "30-40%" },
+  { min: 40, max: 50, color: "#0ea5e9", label: "40-50%" },
+  { min: 50, max: 60, color: "#8b5cf6", label: "50-60%" },
+];
+
+function completionColor(value: number): string {
+  if (value < 20) return "#ef4444";
+  if (value < 30) return "#f59e0b";
+  if (value < 40) return "#10b981";
+  if (value < 50) return "#0ea5e9";
+  return "#8b5cf6";
+}
+
+function CompletionProgressCard({ value }: { value: number }) {
+  const color = completionColor(value);
+  const width = Math.max(0, Math.min(100, value));
+
+  return (
+    <motion.div
+      whileHover={{ y: -2, boxShadow: "0 16px 48px rgba(0,0,0,0.10)" }}
+      whileTap={{ scale: 0.97 }}
+      className="glass-card rounded-2xl p-4 flex flex-col gap-2 cursor-pointer overflow-hidden"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-[var(--app-text-muted)]">平均完播率</span>
+        <div className="flex items-center gap-1">
+          {COMPLETION_BANDS.map((band) => {
+            const active = (value >= band.min && value < band.max) || (band.max === 60 && value >= band.max);
+            return (
+              <span
+                key={band.label}
+                title={band.label}
+                className={`h-2.5 w-2.5 rounded-full border border-white/70 shadow-sm transition-opacity ${active ? "opacity-100" : "opacity-35"}`}
+                style={{ background: band.color, boxShadow: active ? `0 0 12px ${band.color}77` : undefined }}
+              />
+            );
+          })}
+        </div>
+      </div>
+      <div className="text-2xl font-black tracking-tight" style={{ color }}>{value}%</div>
+      <div className="h-2 rounded-full bg-white/55 border border-white/70 overflow-hidden shadow-inner">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${width}%` }}
+          transition={{ type: "spring", bounce: 0.2, duration: 0.8 }}
+          className="h-full rounded-full"
+          style={{
+            background: `linear-gradient(90deg, ${color}99, ${color})`,
+            boxShadow: `0 0 18px ${color}77`,
+          }}
+        />
+      </div>
+      <p className="text-[10px] text-[var(--app-text-muted)]">空值行已排除 · 100%进度</p>
+    </motion.div>
+  );
+}
+
 function TimeWindowBar({ active, onChange, color }: {
   active: TimeWindow;
   onChange: (value: TimeWindow) => void;
